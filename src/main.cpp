@@ -11,8 +11,8 @@ void convertColorFromBGR2HSV(const Mat3b &bgr, Mat3b &hsv) {
 
 int main(int argc, char **argv) {
 	/*Mat3b hsv;
-	Mat3b bgr(Vec3b(0,0,0));
-	convertColorFromBGR2HSV(bgr, hsv);*/
+	 Mat3b bgr(Vec3b(0,0,0));
+	 convertColorFromBGR2HSV(bgr, hsv);*/
 	VideoCapture cap;
 	Mat cap_img;
 
@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
 			cap.retrieve(cap_img);
 			frame++;
 			if (frame > 300) {
+				imshow("Origin", cap_img);
 				LineDetection::detectLines(cap_img);
 			}
 		} else {
