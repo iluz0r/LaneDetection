@@ -2,7 +2,17 @@
 
 #include <iostream>
 
+// Mat3b bgr(Vec3b(100,24,90)) for example
+void convertColorFromBGR2HSV(const Mat3b &bgr, Mat3b &hsv) {
+	// Convert a BGR color to HSV
+	cvtColor(bgr, hsv, COLOR_BGR2HSV);
+	cout << hsv << endl;
+}
+
 int main(int argc, char **argv) {
+	/*Mat3b hsv;
+	Mat3b bgr(Vec3b(0,0,0));
+	convertColorFromBGR2HSV(bgr, hsv);*/
 	VideoCapture cap;
 	Mat cap_img;
 
@@ -21,7 +31,7 @@ int main(int argc, char **argv) {
 		if (cap.grab()) {
 			cap.retrieve(cap_img);
 			frame++;
-			if (frame > 10) {
+			if (frame > 300) {
 				LineDetection::detectLines(cap_img);
 			}
 		} else {

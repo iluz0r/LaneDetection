@@ -27,7 +27,7 @@ float LineDetection::detectLines(const Mat &input) {
 	Mat tmp, yellow_mask, white_mask, red_mask, red_mask1;
 
 	// Black MASK
-	inRange(hsv_mask, Scalar(-180, 0, 0), Scalar(180, 255, 255), tmp);
+	inRange(hsv_mask, Scalar(0, 0, 0), Scalar(180, 255, 60), tmp);
 	int dilat_size = 30;
 	int erode_size = 20;
 
