@@ -34,7 +34,7 @@ int main(int argc, char **argv) {
 			cap.retrieve(cap_img);
 			frame++;
 			if (frame > 300) {
-				imwrite("frame.jpg", cap_img);
+				//imwrite("frame.jpg", cap_img);
 				imshow("Origin", cap_img);
 				LineDetection::detectLines(cap_img);
 			}
