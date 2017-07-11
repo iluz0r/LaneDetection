@@ -8,8 +8,6 @@
 #ifndef SRC_LINEDETECTION_H_
 #define SRC_LINEDETECTION_H_
 
-#define DILATE_SIZE 2
-#define ERODE_SIZE 8
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
@@ -20,6 +18,10 @@
 #include <imgproc/types_c.h>
 #include <stddef.h>
 #include <iostream>
+
+#define VERBOSE false
+#define DILATE_SIZE 2
+#define ERODE_SIZE 8
 
 using namespace cv;
 using namespace std;
@@ -36,6 +38,7 @@ public:
 	static Mat calcYellowMask(const Mat &input, const Mat &blackMask);
 	static Mat calcWhiteMask(const Mat &input, const Mat &blackMask);
 	static Mat calcRedMask(const Mat &input, const Mat &blackMask);
+	static void showImg(String nameWindow, const Mat& mat);
 };
 
 #endif /* SRC_LINEDETECTION_H_ */

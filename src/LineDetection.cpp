@@ -22,7 +22,7 @@ Mat LineDetection::calcBlackMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di neri
 	Mat blackThresh;
 	inRange(input, Scalar(0, 0, 0), Scalar(180, 255, 120), blackThresh);
-	imshow("thresh black (inside calcBlackMask)", blackThresh);
+	showImg("thresh black (inside calcBlackMask)", blackThresh);
 
 	// Effettuo la dilatazione specificandone il kernel (y u do dis?!)
 	Mat mask;
@@ -44,14 +44,14 @@ Mat LineDetection::calcYellowMask(const Mat &input, const Mat &blackMask) {
 	// Effettuo il threshold per una determinata scala di gialli
 	Mat yellowThresh;
 	inRange(input, Scalar(19, 45, 100), Scalar(49, 255, 255), yellowThresh);
-	imshow("thresh yellow (inside calcYellowMask)", yellowThresh);
+	showImg("thresh yellow (inside calcYellowMask)", yellowThresh);
 
 	// Secondo me non serve la black mask!
 	/*
 	 // Faccio la AND tra blackMask e yellowThresh
 	 Mat yellowMask;
 	 bitwise_and(blackMask, yellowThresh, yellowMask, noArray());
-	 imshow("yellowMask (inside calcYellowMask", yellowMask);
+	 showImg("yellowMask (inside calcYellowMask", yellowMask);
 	 */
 
 	// Effettuo la dilatazione specificandone il kernel.
@@ -69,14 +69,14 @@ Mat LineDetection::calcWhiteMask(const Mat &input, const Mat &blackMask) {
 	// Effettuo il threshold per una determinata scala di bianchi
 	Mat whiteThresh;
 	inRange(input, Scalar(0, 0, 235), Scalar(255, 25, 255), whiteThresh);
-	imshow("thresh white (inside calcWhiteMask)", whiteThresh);
+	showImg("thresh white (inside calcWhiteMask)", whiteThresh);
 
 	// Secondo me non serve la black mask!
 	/*
 	 // Faccio la AND tra blackMask e whiteThresh
 	 Mat whiteMask;
 	 bitwise_and(blackMask, whiteThresh, whiteMask, noArray());
-	 imshow("whiteMask (inside calcWhiteMask)", whiteMask);
+	 showImg("whiteMask (inside calcWhiteMask)", whiteMask);
 	 */
 
 	// Effettuo la dilatazione specificandone il kernel
@@ -94,14 +94,14 @@ Mat LineDetection::calcRedMask(const Mat &input, const Mat &blackMask) {
 	// Effettuo il threshold per una determinata scala di rossi
 	Mat redThresh;
 	inRange(input, Scalar(165, 100, 100), Scalar(185, 255, 255), redThresh);
-	imshow("thresh red (inside calcRedMask)", redThresh);
+	showImg("thresh red (inside calcRedMask)", redThresh);
 
 	// Secondo me non serve la black mask!
 	/*
 	 // Faccio la AND tra blackMask e redThresh
 	 Mat redMask;
 	 bitwise_and(blackMask, redThresh, redMask, noArray());
-	 imshow("redMask (inside calcRedMask)", redMask);
+	 showImg("redMask (inside calcRedMask)", redMask);
 	 */
 
 	// Effettuo la dilatazione specificandone il kernel
@@ -129,32 +129,32 @@ float LineDetection::detectLines(const Mat &input) {
 	// Secondo me non serve la black mask, probabilmente andrà eliminata!
 	// Black mask
 	Mat blackMask = LineDetection::calcBlackMask(hsvImg);
-	imshow("Black mask", blackMask);
+	showImg("Black mask", blackMask);
 
 	// Yellow threshold
 	Mat yellowMask = LineDetection::calcYellowMask(hsvImg, blackMask);
-	imshow("Yellow mask", yellowMask);
+	showImg("Yellow mask", yellowMask);
 
 	// White threshold
 	Mat whiteMask = LineDetection::calcWhiteMask(hsvImg, blackMask);
-	imshow("White mask", whiteMask);
+	showImg("White mask", whiteMask);
 
 	// Red threshold
 	Mat redMask = LineDetection::calcRedMask(hsvImg, blackMask);
-	imshow("Red mask", redMask);
+	showImg("Red mask", redMask);
 
 	waitKey(-1);
 
-	// Final mask (la maschera contenente yellow, white e red mask)
-	Mat mask;
-	bitwise_or(yellowMask, whiteMask, mask, noArray());
-	bitwise_or(mask, redMask, mask, noArray());
+//	// Final mask (la maschera contenente yellow, white e red mask)
+//	Mat mask;
+//	bitwise_or(yellowMask, whiteMask, mask, noArray());
+//	bitwise_or(mask, redMask, mask, noArray());
 
 	// Applico Canny sull'immagine di partenza (che è in BGR)
 	Mat grayImg, canny;
 	cvtColor(inputMod, grayImg, CV_BGR2GRAY);
 	Canny(grayImg, canny, 10, 100, 3);
-	imshow("Canny", canny);
+	showImg("Canny", canny);
 
 	waitKey(-1);
 
@@ -165,9 +165,9 @@ float LineDetection::detectLines(const Mat &input) {
 	// Faccio AND tra Canny e la maschera del giallo (dilatata) per ottenere i bordi delle linee gialle
 	Mat yellowEdges;
 	bitwise_and(canny, yellowMask, yellowEdges, noArray());
-	imshow("Contorni linee gialle", yellowEdges);
+	showImg("Contorni linee gialle", yellowEdges);
 
-	// In startEndY ci sono 4 float che rappresentano due punti: Start(x,y) e End(x,y) della linea gialla
+	// In startEndY ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea gialla
 	Vec4f startEndY = LineDetection::calcStartEndYellowLine(yellowEdges);
 	line(result,
 			Point(200 * startEndY[0] + startEndY[2],
@@ -179,7 +179,7 @@ float LineDetection::detectLines(const Mat &input) {
 	// Faccio AND tra Canny e la maschera del bianco (dilatata) per ottenere i bordi delle linee bianche
 	Mat whiteEdges;
 	bitwise_and(canny, whiteMask, whiteEdges, noArray());
-	imshow("Contorni linee bianche", whiteEdges);
+	showImg("Contorni linee bianche", whiteEdges);
 
 	// In startEndW ci sono 4 float che rappresentano due punti: Start(x,y) e End(x,y) della linea bianca
 	Vec4f startEndW = LineDetection::calcStartEndWhiteLine(whiteEdges,
@@ -194,7 +194,7 @@ float LineDetection::detectLines(const Mat &input) {
 	// Faccio AND tra Canny e la maschera del rosso (dilatata) per ottenere i bordi delle linee rosse
 	Mat redEdges;
 	bitwise_and(canny, redMask, redEdges, noArray());
-	imshow("Contorni linee rosse", redEdges);
+	showImg("Contorni linee rosse", redEdges);
 	// Disegno le linee su result
 	LineDetection::detectAndShowLines(redEdges, result, Scalar(0, 0, 255));
 
@@ -297,3 +297,10 @@ Vec4f LineDetection::calcStartEndWhiteLine(const Mat &whiteEdges,
 		wline = Vec4i(1, 100, whiteEdges.cols * 49 / 50, whiteEdges.rows / 2);
 	return wline;
 }
+
+void LineDetection::showImg(String nameWindow, const Mat &mat) {
+	if (VERBOSE) {
+		imshow(nameWindow, mat);
+	}
+}
+
