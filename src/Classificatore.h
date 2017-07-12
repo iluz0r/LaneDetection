@@ -31,6 +31,7 @@ struct CvSVMParams;
 #define NUMBER_OF_HISTOGRAM_FEATURES 	6
 #define NUMBER_OF_EDGE_FEATURES			1
 #define NUMBER_OF_HOG_FEATURES			99864
+#define NUMBER_OF_LBP_FEATURES			256
 
 #define USE_THIRD_ORDER_MOMENTS			0
 #define USE_HU_MOMENTS					1
@@ -38,6 +39,7 @@ struct CvSVMParams;
 #define USE_HISTOGRAM_FEATURES			1
 #define USE_SPLIT_IMAGE_FOR_HISTOGRAM	1
 #define USE_HOG_FEATURES				1
+#define USE_LBP_FEATURES				1
 
 #define PCA_VARIANCE					0.98
 #define THRESH 							200
@@ -77,10 +79,15 @@ private:
 	void computeFeatures(Mat &img, vector<float> & fv);
 	void showHistogram(Mat &img);
 
+	void histogramLBP(const Mat &lbp, vector<float> &fv, const int numBins);
+	void ELBP(const Mat &img, Mat &lbp, int radius, int neighbors);
+	void OLBP(const Mat &img, Mat &lbp);
+
 	void computeFeaturesDefault(Mat &img, vector<float> & fv);
 	void computeFeaturesEdge(Mat &img, vector<float> &fv);
 	void computeFeaturesHistogram(Mat &img, vector<float> &fv);
 	void computeFeaturesHOG(Mat &img, vector<float> &fv);
+	void computeFeaturesLBP(Mat &img, vector<float> &fv);
 
 	bool isCorrectDecision(Mat &img, int classType);
 	void splitimage(Mat &img, vector<Mat> &blocks);
@@ -100,6 +107,7 @@ public:
 	static const unsigned int F_COD_SPLIT_IMAGE_FOR_HISTOGRAM = (1 << 4)
 			| (1 << 3);
 	static const unsigned int F_COD_FEATURE_HOG = 1 << 5;
+	static const unsigned int F_COD_FEATURE_LBP = 1 << 6;
 
 	Classificatore();
 	Classificatore(String pathOfClassifierBackup);

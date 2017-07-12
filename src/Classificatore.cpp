@@ -145,6 +145,9 @@ void Classificatore::loadData() {
 	if (featuresCODE & F_COD_FEATURE_HOG) {
 		num_of_features += NUMBER_OF_HOG_FEATURES;
 	}
+	if (featuresCODE & F_COD_FEATURE_LBP) {
+		num_of_features += NUMBER_OF_LBP_FEATURES;
+	}
 
 	trainData = Mat(training_per_class * numberOfClass, num_of_features,
 	CV_32F);
@@ -396,6 +399,8 @@ void Classificatore::computeFeatures(Mat &img, vector<float> & fv) {
 	}
 	if (featuresCODE & F_COD_FEATURE_HOG)
 		computeFeaturesHOG(img, fv);
+	if (featuresCODE & F_COD_FEATURE_LBP)
+		computeFeaturesLBP(img, fv);
 }
 
 void Classificatore::computeFeaturesHOG(Mat &img, vector<float> &fv) {
@@ -412,6 +417,91 @@ void Classificatore::computeFeaturesHOG(Mat &img, vector<float> &fv) {
 	for (unsigned int i = 0; i < descriptors.size(); i++) {
 		fv.push_back(descriptors[i]);
 	}
+}
+
+void Classificatore::histogramLBP(const Mat &lbp, vector<float> &fv,
+		const int numBins) {
+	fv = vector<float>(numBins);
+	for (int i = 0; i < lbp.rows; i++) {
+		for (int j = 0; j < lbp.cols; j++) {
+			int bin = lbp.at<unsigned char>(i, j);
+			fv[bin]++;
+		}
+	}
+}
+
+void Classificatore::ELBP(const Mat &img, Mat &lbp, int radius, int neighbors) {
+	neighbors = max(min(neighbors, 31), 1); // set bounds
+	lbp = Mat::zeros(img.rows - 2 * radius, img.cols - 2 * radius, CV_32SC1);
+	for (int n = 0; n < neighbors; n++) {
+		// sample points
+		float x = static_cast<float>(radius)
+				* cos(2.0 * M_PI * n / static_cast<float>(neighbors));
+		float y = static_cast<float>(radius)
+				* -sin(2.0 * M_PI * n / static_cast<float>(neighbors));
+		// relative indices
+		int fx = static_cast<int>(floor(x));
+		int fy = static_cast<int>(floor(y));
+		int cx = static_cast<int>(ceil(x));
+		int cy = static_cast<int>(ceil(y));
+		// fractional part
+		float ty = y - fy;
+		float tx = x - fx;
+		// set interpolation weights
+		float w1 = (1 - tx) * (1 - ty);
+		float w2 = tx * (1 - ty);
+		float w3 = (1 - tx) * ty;
+		float w4 = tx * ty;
+		// iterate through your data
+		for (int i = radius; i < img.rows - radius; i++) {
+			for (int j = radius; j < img.cols - radius; j++) {
+				float t = w1 * img.at<unsigned char>(i + fy, j + fx)
+						+ w2 * img.at<unsigned char>(i + fy, j + cx)
+						+ w3 * img.at<unsigned char>(i + cy, j + fx)
+						+ w4 * img.at<unsigned char>(i + cy, j + cx);
+				// we are dealing with floating point precision, so add some little tolerance
+				lbp.at<unsigned int>(i - radius, j - radius) += ((t
+						> img.at<unsigned char>(i, j))
+						&& (abs(t - img.at<unsigned char>(i, j))
+								> std::numeric_limits<float>::epsilon())) << n;
+			}
+		}
+	}
+}
+
+void Classificatore::OLBP(const Mat &img, Mat &lbp) {
+	lbp = Mat::zeros(img.rows - 2, img.cols - 2, CV_8UC1);
+	for (int i = 1; i < img.rows - 1; i++) {
+		for (int j = 1; j < img.cols - 1; j++) {
+			float center = img.at<unsigned char>(i, j);
+			unsigned char code = 0;
+			code |= (img.at<unsigned char>(i - 1, j - 1) > center) << 7;
+			code |= (img.at<unsigned char>(i - 1, j) > center) << 6;
+			code |= (img.at<unsigned char>(i - 1, j + 1) > center) << 5;
+			code |= (img.at<unsigned char>(i, j + 1) > center) << 4;
+			code |= (img.at<unsigned char>(i + 1, j + 1) > center) << 3;
+			code |= (img.at<unsigned char>(i + 1, j) > center) << 2;
+			code |= (img.at<unsigned char>(i + 1, j - 1) > center) << 1;
+			code |= (img.at<unsigned char>(i, j - 1) > center) << 0;
+			lbp.at<unsigned char>(i - 1, j - 1) = code;
+		}
+	}
+}
+
+void Classificatore::computeFeaturesLBP(Mat &img, vector<float> &fv) {
+	// Probabilmente fare resize del campione
+	Mat sample_gray;
+	cvtColor(img, sample_gray, CV_BGR2GRAY);
+	// Smooth per migliorare il risultato
+	GaussianBlur(sample_gray, sample_gray, Size(7, 7), 5, 3, BORDER_CONSTANT);
+	Mat lbp;
+	// LBP originale
+	OLBP(sample_gray, lbp);
+	// LBP esteso
+	// ELBP(sample_gray, lbp, 4, 4); // Fare prove facendo variare radius e neightbors tra 2, 4, 8, 12, 16.. non oltre
+	// Normalizzo da 0 a 255 in modo da avere sempre e solo 256 features
+	normalize(lbp, lbp, 0, 255, NORM_MINMAX, CV_8UC1);
+	histogramLBP(lbp, fv, NUMBER_OF_LBP_FEATURES);
 }
 
 void Classificatore::splitimage(Mat &img, vector<Mat> &blocks) {
