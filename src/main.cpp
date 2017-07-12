@@ -17,13 +17,17 @@ int main(int argc, char **argv) {
 	 */
 	VideoCapture cap;
 	Mat cap_img;
-
+	float err = 0;
 	int frame = 0;
+
 	cap.set(CV_CAP_PROP_FPS, 10);
 	cap.set(CV_CAP_PROP_BUFFERSIZE, 10);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
-	cap.open("video/video.h264");
+
+	//cap.open("video/video.h264");
+	cap.open("/home/virus/Desktop/fifo264");
+	//cap.open("/home/virus/Desktop/out.h264");
 
 	if (!cap.isOpened()) {
 		cout << "Errore" << endl;
@@ -34,9 +38,9 @@ int main(int argc, char **argv) {
 			cap.retrieve(cap_img);
 			frame++;
 			if (frame > 300) {
-				//imwrite("frame.jpg", cap_img);
-				imshow("Origin", cap_img);
-				LineDetection::detectLines(cap_img);
+				//imshow("Origin", cap_img);
+				err = LineDetection::detectLines(cap_img);
+				cout << "Errore:" << err << endl;
 			}
 		} else {
 			cap.release();

@@ -15,19 +15,23 @@ LineDetection::~LineDetection() {
 // TODO Auto-generated destructor stub
 }
 
+// Questa maschera è utile quando lo spazio esterno alla pista è maggiore (in area) alla dimensione delle linee
+// Il problema di questa maschera si presenta quando con la dilate non riusciamo a chiudere i buchi (delle linee)
+// che si trovano all'interno della pista (praticamente si rischia di perdere la linea)
 Mat LineDetection::calcBlackMask(const Mat &input) {
 	//Controllo che la matrice in ingresso sia in HSV
 	assert(input.type() == CV_8UC3);
 
 	// Effettuo il threshold per una determinata scala di neri
 	Mat blackThresh;
-	inRange(input, Scalar(0, 0, 0), Scalar(180, 255, 120), blackThresh);
-	showImg("thresh black (inside calcBlackMask)", blackThresh);
+	inRange(input, Scalar(0, 0, 0), Scalar(180, 255, 100), blackThresh);
+	showImg("Thrush black (inside calcBlackMask)", blackThresh);
 
-	// Effettuo la dilatazione specificandone il kernel (y u do dis?!)
+	// Effettuo la dilatazione specificandone il kernel
 	Mat mask;
+	int k = 6;
 	Mat kernel = getStructuringElement(MORPH_RECT,
-			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
+			Size(k * 2 * DILATE_SIZE + 1, k * 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
 	dilate(blackThresh, mask, kernel);
 
@@ -47,20 +51,19 @@ Mat LineDetection::calcYellowMask(const Mat &input, const Mat &blackMask) {
 	showImg("thresh yellow (inside calcYellowMask)", yellowThresh);
 
 	// Secondo me non serve la black mask!
-	/*
+
 	 // Faccio la AND tra blackMask e yellowThresh
 	 Mat yellowMask;
 	 bitwise_and(blackMask, yellowThresh, yellowMask, noArray());
 	 showImg("yellowMask (inside calcYellowMask", yellowMask);
-	 */
 
 	// Effettuo la dilatazione specificandone il kernel.
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
 	Mat kernel = getStructuringElement(MORPH_RECT,
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
-	Mat yellowMask;
-	dilate(yellowThresh, yellowMask, kernel);
+	//Mat yellowMask;
+	dilate(yellowMask, yellowMask, kernel);
 
 	return yellowMask;
 }
@@ -72,20 +75,18 @@ Mat LineDetection::calcWhiteMask(const Mat &input, const Mat &blackMask) {
 	showImg("thresh white (inside calcWhiteMask)", whiteThresh);
 
 	// Secondo me non serve la black mask!
-	/*
 	 // Faccio la AND tra blackMask e whiteThresh
 	 Mat whiteMask;
 	 bitwise_and(blackMask, whiteThresh, whiteMask, noArray());
 	 showImg("whiteMask (inside calcWhiteMask)", whiteMask);
-	 */
 
 	// Effettuo la dilatazione specificandone il kernel
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
 	Mat kernel = getStructuringElement(MORPH_RECT,
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
-	Mat whiteMask;
-	dilate(whiteThresh, whiteMask, kernel);
+	//Mat whiteMask;
+	dilate(whiteMask, whiteMask, kernel);
 
 	return whiteMask;
 }
@@ -143,8 +144,6 @@ float LineDetection::detectLines(const Mat &input) {
 	Mat redMask = LineDetection::calcRedMask(hsvImg, blackMask);
 	showImg("Red mask", redMask);
 
-	waitKey(-1);
-
 //	// Final mask (la maschera contenente yellow, white e red mask)
 //	Mat mask;
 //	bitwise_or(yellowMask, whiteMask, mask, noArray());
@@ -156,8 +155,6 @@ float LineDetection::detectLines(const Mat &input) {
 	Canny(grayImg, canny, 10, 100, 3);
 	showImg("Canny", canny);
 
-	waitKey(-1);
-
 	// Copio in result l'immagine di partenza (metà inferiore) in BGR
 	// Mi serve perché successivamente andrò a disegnarci le varie linee sopra
 	Mat result = inputMod.clone();
@@ -168,11 +165,11 @@ float LineDetection::detectLines(const Mat &input) {
 	showImg("Contorni linee gialle", yellowEdges);
 
 	// In startEndY ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea gialla
-	Vec4f startEndY = LineDetection::calcStartEndYellowLine(yellowEdges);
+	Vec4f startDirY = LineDetection::calcStartEndYellowLine(yellowEdges);
 	line(result,
-			Point(200 * startEndY[0] + startEndY[2],
-					200 * startEndY[1] + startEndY[3]),
-			Point(startEndY[2], startEndY[3]), Scalar(255, 100, 255), 3, 4);
+			Point(200 * startDirY[0] + startDirY[2],
+					200 * startDirY[1] + startDirY[3]),
+			Point(startDirY[2], startDirY[3]), Scalar(255, 100, 255), 3, 4);
 	// Disegno le linee su result
 	LineDetection::detectAndShowLines(yellowEdges, result, Scalar(0, 255, 255));
 
@@ -181,13 +178,13 @@ float LineDetection::detectLines(const Mat &input) {
 	bitwise_and(canny, whiteMask, whiteEdges, noArray());
 	showImg("Contorni linee bianche", whiteEdges);
 
-	// In startEndW ci sono 4 float che rappresentano due punti: Start(x,y) e End(x,y) della linea bianca
-	Vec4f startEndW = LineDetection::calcStartEndWhiteLine(whiteEdges,
-			startEndY);
+	// In startEndW ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea bianca
+	Vec4f startDirW = LineDetection::calcStartEndWhiteLine(whiteEdges,
+			startDirY);
 	line(result,
-			Point(200 * startEndW[0] + startEndW[2],
-					200 * startEndW[1] + startEndW[3]),
-			Point(startEndW[2], startEndW[3]), Scalar(255, 100, 255), 3, 4);
+			Point(200 * startDirW[0] + startDirW[2],
+					200 * startDirW[1] + startDirW[3]),
+			Point(startDirW[2], startDirW[3]), Scalar(255, 100, 255), 3, 4);
 	// Disegno le linee su result
 	LineDetection::detectAndShowLines(whiteEdges, result, Scalar(0, 0, 0));
 
@@ -202,11 +199,11 @@ float LineDetection::detectLines(const Mat &input) {
 	Point P(inputMod.cols / 2, inputMod.rows / 2);
 
 	// Considero punto di fine della retta gialla e punto di fine della retta bianca
-	Point whiteEndPoint(startEndW[2], startEndW[3]), yellowEndPoint(
-			startEndY[2], startEndY[3]);
+	Point whiteEndPoint(startDirW[2], startDirW[3]), yellowEndPoint(
+			startDirY[2], startDirY[3]);
 
 	// Calcolo i coefficienti angolari di linea bianca e linea gialla
-	float mw = startEndW[1] / startEndW[0], my = startEndY[1] / startEndY[0];
+	float mw = startDirW[1] / startDirW[0], my = startDirY[1] / startDirY[0];
 
 	// Calcolo la distanza tra P e le due rette (bianca e gialla)
 	float distWhite = abs(
@@ -224,16 +221,17 @@ float LineDetection::detectLines(const Mat &input) {
 
 	// Disegno la result con tutte le linee e cerchi
 	imshow("LINE", result);
+	waitKey(1);
 
 	// Rettifico la mia traiettoria valutando le distanze dalle rette bianche e gialle
 	// Ho dei dubbi sul primo if!
 	float threshold = 10;
 	if (distWhite - distYellow > threshold) {
-		// Correggo verso sinistra
+		// Correggo verso destra
 		return 1 * distWhite / distYellow;
 	}
 	if (distWhite - distYellow < -threshold) {
-		// Correggo verso destra
+		// Correggo verso sinistra
 		return -1 * distYellow / distWhite;
 	}
 	return 0;
