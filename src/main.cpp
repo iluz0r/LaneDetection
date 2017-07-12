@@ -36,7 +36,6 @@ int main(int argc, char **argv) {
 	cap.set(CV_CAP_PROP_BUFFERSIZE, 10);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
-
 	cap.open("video/video.h264");
 	//cap.open("/home/virus/Desktop/fifo264");
 	//cap.open("/home/virus/Desktop/out.h264");
@@ -51,9 +50,10 @@ int main(int argc, char **argv) {
 			frame++;
 			if (frame > 300) {
 				//imshow("Origin", cap_img);
-				//err = LineDetection::detectLines(cap_img);
-				//cout << "Errore:" << err << endl;
-				SignalDetect::detectAndClassifySignal(cap_img, face_cascade, clas);
+				err = LineDetection::detectLines(cap_img);
+				cout << "Errore:" << err << endl;
+				waitKey(0);
+				//SignalDetect::detectAndClassifySignal(cap_img, face_cascade, clas);
 			}
 		} else {
 			cap.release();
