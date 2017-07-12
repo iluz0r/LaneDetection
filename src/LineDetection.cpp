@@ -1,10 +1,3 @@
-/*
- * LineDection.cpp
- *
- *  Created on: 10 lug 2017
- *      Author: angelo
- */
-
 #include "LineDetection.h"
 
 LineDetection::LineDetection() {
@@ -301,4 +294,3 @@ void LineDetection::showImg(String nameWindow, const Mat &mat) {
 		imshow(nameWindow, mat);
 	}
 }
-

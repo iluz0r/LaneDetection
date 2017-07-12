@@ -1,4 +1,7 @@
 #include "LineDetection.h"
+#include "SignalDetect.h"
+
+#define CLASSIFIER_FILE "FilesClassifier/cascade.xml"
 
 #include <iostream>
 
@@ -20,13 +23,22 @@ int main(int argc, char **argv) {
 	float err = 0;
 	int frame = 0;
 
+	// Detect variables initialization
+	Classificatore clas = Classificatore(/* Leggere da file */);
+	//Caricamento del classificatore ViolaJones
+	CascadeClassifier face_cascade;
+	if (!face_cascade.load(CLASSIFIER_FILE)) {
+		cout << "Error loading classifier" << endl;
+		return 1;
+	}
+
 	cap.set(CV_CAP_PROP_FPS, 10);
 	cap.set(CV_CAP_PROP_BUFFERSIZE, 10);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
 
-	//cap.open("video/video.h264");
-	cap.open("/home/virus/Desktop/fifo264");
+	cap.open("video/video.h264");
+	//cap.open("/home/virus/Desktop/fifo264");
 	//cap.open("/home/virus/Desktop/out.h264");
 
 	if (!cap.isOpened()) {
@@ -39,8 +51,9 @@ int main(int argc, char **argv) {
 			frame++;
 			if (frame > 300) {
 				//imshow("Origin", cap_img);
-				err = LineDetection::detectLines(cap_img);
-				cout << "Errore:" << err << endl;
+				//err = LineDetection::detectLines(cap_img);
+				//cout << "Errore:" << err << endl;
+				SignalDetect::detectAndClassifySignal(cap_img, face_cascade, clas);
 			}
 		} else {
 			cap.release();

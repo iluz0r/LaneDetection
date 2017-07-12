@@ -1,10 +1,3 @@
-/*
- * LineDection.h
- *
- *  Created on: 10 lug 2017
- *      Author: angelo
- */
-
 #ifndef SRC_LINEDETECTION_H_
 #define SRC_LINEDETECTION_H_
 
