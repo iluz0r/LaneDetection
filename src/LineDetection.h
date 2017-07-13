@@ -2,15 +2,16 @@
 #define SRC_LINEDETECTION_H_
 
 
+#include <opencv2/core/core.hpp>
+#include <opencv2/core/operations.hpp>
+#include <opencv2/core/types_c.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
-#include <core/core.hpp>
-#include <core/mat.hpp>
-#include <core/operations.hpp>
-#include <core/types_c.h>
-#include <imgproc/types_c.h>
+#include <opencv2/imgproc/types_c.h>
 #include <stddef.h>
-#include <iostream>
+#include <cassert>
+#include <cmath>
+#include <vector>
 
 #define VERBOSE false
 #define DILATE_SIZE 2
