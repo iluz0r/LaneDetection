@@ -19,15 +19,15 @@ int main(int argc, char **argv) {
 	 convertColorFromBGR2HSV(bgr);
 	 */
 	VideoCapture cap;
-	Mat cap_img;
+	Mat capImg;
 	float err = 0;
 	int frame = 0;
 
 	// Detect variables initialization
 	Classificatore clas = Classificatore(/* Leggere da file */);
 	//Caricamento del classificatore ViolaJones
-	CascadeClassifier face_cascade;
-	if (!face_cascade.load(CLASSIFIER_FILE)) {
+	CascadeClassifier trainCascade;
+	if (!trainCascade.load(CLASSIFIER_FILE)) {
 		cout << "Error loading classifier" << endl;
 		return 1;
 	}
@@ -36,7 +36,7 @@ int main(int argc, char **argv) {
 	cap.set(CV_CAP_PROP_BUFFERSIZE, 10);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
-	cap.open("video/video.h264");
+	cap.open("video/right.mp4");
 	//cap.open("/home/virus/Desktop/fifo264");
 	//cap.open("/home/virus/Desktop/out.h264");
 
@@ -46,15 +46,18 @@ int main(int argc, char **argv) {
 	}
 	while (cap.isOpened()) {
 		if (cap.grab()) {
-			cap.retrieve(cap_img);
+			cap.retrieve(capImg);
+			/*
 			frame++;
 			if (frame > 300) {
-				//imshow("Origin", cap_img);
 				err = LineDetection::detectLines(cap_img);
 				cout << "Errore:" << err << endl;
 				waitKey(0);
-				//SignalDetect::detectAndClassifySignal(cap_img, face_cascade, clas);
 			}
+			*/
+			SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
+			imshow("Result", capImg);
+			waitKey(1);
 		} else {
 			cap.release();
 		}

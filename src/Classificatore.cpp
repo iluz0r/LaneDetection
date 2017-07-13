@@ -379,7 +379,7 @@ void Classificatore::computeFeaturesEdge(Mat &img, vector<float> & fv) {
 //	waitKey(-1);
 }
 
-void Classificatore::computeFeatures(Mat &img, vector<float> & fv) {
+void Classificatore::computeFeatures(Mat &img, vector<float> &fv) {
 	if (featuresCODE & F_COD_FEATURE_EDGE)
 		computeFeaturesEdge(img, fv);
 	if ((featuresCODE & F_COD_HU_MOMENTS)
@@ -397,8 +397,10 @@ void Classificatore::computeFeatures(Mat &img, vector<float> & fv) {
 			computeFeaturesHistogram(img, fv);
 		}
 	}
+	/*
 	if (featuresCODE & F_COD_FEATURE_HOG)
 		computeFeaturesHOG(img, fv);
+		*/
 	if (featuresCODE & F_COD_FEATURE_LBP)
 		computeFeaturesLBP(img, fv);
 }
