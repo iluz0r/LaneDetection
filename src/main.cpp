@@ -1,7 +1,7 @@
 #include "LineDetection.h"
 #include "SignalDetect.h"
 
-#define CLASSIFIER_FILE "FilesClassifier/cascade.xml"
+#define CLASSIFIER_FILE "FilesClassifier/cascadeNew.xml"
 
 #include <iostream>
 
@@ -37,6 +37,7 @@ int main(int argc, char **argv) {
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
 	cap.open("video/right.mp4");
+	//cap.open(0);
 	//cap.open("/home/virus/Desktop/fifo264");
 	//cap.open("/home/virus/Desktop/out.h264");
 
@@ -48,13 +49,13 @@ int main(int argc, char **argv) {
 		if (cap.grab()) {
 			cap.retrieve(capImg);
 			/*
-			frame++;
-			if (frame > 300) {
-				err = LineDetection::detectLines(cap_img);
-				cout << "Errore:" << err << endl;
-				waitKey(0);
-			}
-			*/
+			 frame++;
+			 if (frame > 300) {
+			 err = LineDetection::detectLines(cap_img);
+			 cout << "Errore:" << err << endl;
+			 waitKey(0);
+			 }
+			 */
 			SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
 			imshow("Result", capImg);
 			waitKey(1);
