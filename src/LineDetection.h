@@ -1,7 +1,6 @@
 #ifndef SRC_LINEDETECTION_H_
 #define SRC_LINEDETECTION_H_
 
-
 #include <opencv2/core/core.hpp>
 #include <opencv2/core/operations.hpp>
 #include <opencv2/core/types_c.h>
@@ -24,10 +23,13 @@ class LineDetection {
 public:
 	LineDetection();
 	virtual ~LineDetection();
-	static float detectLines(const Mat &img);
+	static vector<Vec4f> detectLines(const Mat &img);
+	static void calcAdjParams(const vector<Vec4f> &lines, Mat &input,
+			float &leftWheel, float &rightWheel);
 	static void detectAndShowLines(const Mat &input, Mat &output, Scalar color);
-	static Vec4f calcStartEndYellowLine(const Mat &input);
-	static Vec4f calcStartEndWhiteLine(const Mat &input, Vec4f center);
+	static Vec4f calcStartDirYellowLine(const Mat &input);
+	static Vec4f calcStartDirRedLine(const Mat &input);
+	static Vec4f calcStartDirWhiteLine(const Mat &input, Vec4f center);
 	static Mat calcBlackMask(const Mat &input);
 	static Mat calcYellowMask(const Mat &input, const Mat &blackMask);
 	static Mat calcWhiteMask(const Mat &input, const Mat &blackMask);

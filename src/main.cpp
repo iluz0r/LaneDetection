@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
 	 */
 	VideoCapture cap;
 	Mat capImg;
-	float err = 0;
+	vector<Vec4f> lines;
 	int frame = 0;
 
 	// Detect variables initialization
@@ -48,16 +48,16 @@ int main(int argc, char **argv) {
 	while (cap.isOpened()) {
 		if (cap.grab()) {
 			cap.retrieve(capImg);
-			/*
+
 			 frame++;
 			 if (frame > 300) {
-			 err = LineDetection::detectLines(cap_img);
-			 cout << "Errore:" << err << endl;
-			 waitKey(0);
+				lines = LineDetection::detectLines(capImg);
+				float leftWheel = 1, rightWheel = 1;
+				LineDetection::calcAdjParams(lines, capImg, leftWheel, rightWheel);
+				cout << "Left wheel:" << leftWheel << ", Right wheel: "<< rightWheel << endl;
 			 }
-			 */
-			SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
-			imshow("Result", capImg);
+			//SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
+			imshow("Captured image", capImg);
 			waitKey(1);
 		} else {
 			cap.release();
