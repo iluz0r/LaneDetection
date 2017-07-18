@@ -30,10 +30,9 @@ public:
 	static Vec4f calcStartDirYellowLine(const Mat &input);
 	static Vec4f calcStartDirRedLine(const Mat &input);
 	static Vec4f calcStartDirWhiteLine(const Mat &input, Vec4f center);
-	static Mat calcBlackMask(const Mat &input);
-	static Mat calcYellowMask(const Mat &input, const Mat &blackMask);
-	static Mat calcWhiteMask(const Mat &input, const Mat &blackMask);
-	static Mat calcRedMask(const Mat &input, const Mat &blackMask);
+	static Mat calcYellowMask(const Mat &input);
+	static Mat calcWhiteMask(const Mat &input);
+	static Mat calcRedMask(const Mat &input);
 	static void showImg(String nameWindow, const Mat& mat);
 };
 

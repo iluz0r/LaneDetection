@@ -8,70 +8,27 @@ LineDetection::~LineDetection() {
 // TODO Auto-generated destructor stub
 }
 
-// Questa maschera è utile quando lo spazio esterno alla pista è maggiore (in area) alla dimensione delle linee
-// Il problema di questa maschera si presenta quando con la dilate non riusciamo a chiudere i buchi (delle linee)
-// che si trovano all'interno della pista (praticamente si rischia di perdere la linea)
-Mat LineDetection::calcBlackMask(const Mat &input) {
-	//Controllo che la matrice in ingresso sia in HSV
-	assert(input.type() == CV_8UC3);
-
-	// Effettuo il threshold per una determinata scala di neri
-	Mat blackThresh;
-	inRange(input, Scalar(0, 0, 0), Scalar(180, 255, 100), blackThresh);
-	showImg("Thrush black (inside calcBlackMask)", blackThresh);
-
-	// Effettuo la dilatazione specificandone il kernel
-	Mat mask;
-	int k = 6;
-	Mat kernel = getStructuringElement(MORPH_RECT,
-			Size(k * 2 * DILATE_SIZE + 1, k * 2 * DILATE_SIZE + 1),
-			Point(DILATE_SIZE, DILATE_SIZE));
-	dilate(blackThresh, mask, kernel);
-
-	// Effettuo l'erosione specificandone il kernel
-	kernel = getStructuringElement(MORPH_RECT,
-			Size(2 * ERODE_SIZE + 1, 2 * ERODE_SIZE + 1),
-			Point(ERODE_SIZE, ERODE_SIZE));
-	erode(mask, mask, kernel);
-
-	return mask;
-}
-
-Mat LineDetection::calcYellowMask(const Mat &input, const Mat &blackMask) {
+Mat LineDetection::calcYellowMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di gialli
 	Mat yellowThresh;
-	inRange(input, Scalar(19, 45, 100), Scalar(49, 255, 255), yellowThresh);
+	inRange(input, Scalar(16, 160, 100), Scalar(36, 255, 255), yellowThresh);
 	showImg("thresh yellow (inside calcYellowMask)", yellowThresh);
-
-	// Secondo me non serve la black mask!
-
-	// Faccio la AND tra blackMask e yellowThresh
-	Mat yellowMask;
-	bitwise_and(blackMask, yellowThresh, yellowMask, noArray());
-	showImg("yellowMask (inside calcYellowMask", yellowMask);
 
 	// Effettuo la dilatazione specificandone il kernel.
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
 	Mat kernel = getStructuringElement(MORPH_RECT,
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
-	//Mat yellowMask;
-	dilate(yellowMask, yellowMask, kernel);
+	dilate(yellowThresh, yellowThresh, kernel);
 
-	return yellowMask;
+	return yellowThresh;
 }
 
-Mat LineDetection::calcWhiteMask(const Mat &input, const Mat &blackMask) {
+Mat LineDetection::calcWhiteMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di bianchi
 	Mat whiteThresh;
-	inRange(input, Scalar(0, 0, 235), Scalar(255, 25, 255), whiteThresh);
+	inRange(input, Scalar(60, 0, 235), Scalar(255, 25, 255), whiteThresh);
 	showImg("thresh white (inside calcWhiteMask)", whiteThresh);
-
-	// Secondo me non serve la black mask!
-	// Faccio la AND tra blackMask e whiteThresh
-	Mat whiteMask;
-	bitwise_and(blackMask, whiteThresh, whiteMask, noArray());
-	showImg("whiteMask (inside calcWhiteMask)", whiteMask);
 
 	// Effettuo la dilatazione specificandone il kernel
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
@@ -79,34 +36,25 @@ Mat LineDetection::calcWhiteMask(const Mat &input, const Mat &blackMask) {
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
 	//Mat whiteMask;
-	dilate(whiteMask, whiteMask, kernel);
+	dilate(whiteThresh, whiteThresh, kernel);
 
-	return whiteMask;
+	return whiteThresh;
 }
 
-Mat LineDetection::calcRedMask(const Mat &input, const Mat &blackMask) {
+Mat LineDetection::calcRedMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di rossi
 	Mat redThresh;
 	inRange(input, Scalar(165, 100, 100), Scalar(185, 255, 255), redThresh);
 	showImg("thresh red (inside calcRedMask)", redThresh);
-
-	// Secondo me non serve la black mask!
-	/*
-	 // Faccio la AND tra blackMask e redThresh
-	 Mat redMask;
-	 bitwise_and(blackMask, redThresh, redMask, noArray());
-	 showImg("redMask (inside calcRedMask)", redMask);
-	 */
 
 	// Effettuo la dilatazione specificandone il kernel
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
 	Mat kernel = getStructuringElement(MORPH_RECT,
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
-	Mat redMask;
-	dilate(redThresh, redMask, kernel);
+	dilate(redThresh, redThresh, kernel);
 
-	return redMask;
+	return redThresh;
 }
 
 vector<Vec4f> LineDetection::detectLines(const Mat &input) {
@@ -114,7 +62,8 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	vector<Vec4f> linesOutput;
 
 	// Designo l'area di interesse (la metà inferiore dell'immagine di ingresso) e la ritaglio inserendola in inputMod
-	Rect roi = Rect(Point(0, input.rows / 5 * 3), Point(input.cols, input.rows));
+	Rect roi = Rect(Point(0, input.rows / 5 * 3),
+			Point(input.cols, input.rows));
 	Mat inputMod = input(roi);
 
 	assert(inputMod.type() == CV_8UC3);
@@ -123,21 +72,16 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	Mat hsvImg;
 	cvtColor(inputMod, hsvImg, CV_BGR2HSV);
 
-	// Secondo me non serve la black mask, probabilmente andrà eliminata!
-	// Black mask
-	Mat blackMask = LineDetection::calcBlackMask(hsvImg);
-	showImg("Black mask", blackMask);
-
 	// Yellow threshold
-	Mat yellowMask = LineDetection::calcYellowMask(hsvImg, blackMask);
+	Mat yellowMask = LineDetection::calcYellowMask(hsvImg);
 	showImg("Yellow mask", yellowMask);
 
 	// White threshold
-	Mat whiteMask = LineDetection::calcWhiteMask(hsvImg, blackMask);
+	Mat whiteMask = LineDetection::calcWhiteMask(hsvImg);
 	showImg("White mask", whiteMask);
 
 	// Red threshold
-	Mat redMask = LineDetection::calcRedMask(hsvImg, blackMask);
+	Mat redMask = LineDetection::calcRedMask(hsvImg);
 	showImg("Red mask", redMask);
 
 	// Applico Canny sull'immagine di partenza (che è in BGR)
@@ -150,7 +94,7 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	// Mi serve perché successivamente andrò a disegnarci le varie linee sopra
 	Mat result = inputMod.clone();
 
-	// Faccio AND tra Canny e la maschera del giallo (dilatata) per ottenere i bordi delle linee gialle
+	// Faccio AND tra Canny e la maschera del giallo (threshold dilatato) per ottenere i bordi delle linee gialle
 	Mat yellowEdges;
 	bitwise_and(canny, yellowMask, yellowEdges, noArray());
 	showImg("Contorni linee gialle", yellowEdges);
@@ -189,6 +133,12 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 
 	imshow("Result", result);
 	waitKey(1);
+
+	srand(time(NULL));
+	int rnd = rand();
+	stringstream ss;
+	ss << "images/" << "img_" << rnd << ".jpg";
+	imwrite(ss.str(), result);
 
 	return linesOutput;
 }
