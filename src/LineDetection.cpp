@@ -11,7 +11,7 @@ LineDetection::~LineDetection() {
 Mat LineDetection::calcYellowMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di gialli
 	Mat yellowThresh;
-	inRange(input, Scalar(16, 160, 100), Scalar(36, 255, 255), yellowThresh);
+	inRange(input, Scalar(16, 190, 100), Scalar(36, 255, 255), yellowThresh);
 	showImg("thresh yellow (inside calcYellowMask)", yellowThresh);
 
 	// Effettuo la dilatazione specificandone il kernel.
@@ -27,7 +27,7 @@ Mat LineDetection::calcYellowMask(const Mat &input) {
 Mat LineDetection::calcWhiteMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di bianchi
 	Mat whiteThresh;
-	inRange(input, Scalar(60, 0, 235), Scalar(255, 25, 255), whiteThresh);
+	inRange(input, Scalar(0, 0, 235), Scalar(255, 35, 255), whiteThresh);
 	showImg("thresh white (inside calcWhiteMask)", whiteThresh);
 
 	// Effettuo la dilatazione specificandone il kernel
@@ -132,7 +132,7 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	LineDetection::detectAndShowLines(yellowEdges, result, Scalar(0, 255, 255));
 
 	imshow("Result", result);
-	waitKey(1);
+	waitKey(50);
 
 	srand(time(NULL));
 	int rnd = rand();
