@@ -8,15 +8,49 @@ LineDetection::~LineDetection() {
 // TODO Auto-generated destructor stub
 }
 
+// perform the Simplest Color Balancing algorithm
+void LineDetection::colorBalancing(const Mat &input, Mat &output,
+		const float percent) {
+	assert(input.channels() == 3);
+	assert(percent > 0 && percent < 100);
+
+	float halfPercent = percent / 200.0f;
+
+	vector<Mat> tmpsplit;
+	split(input, tmpsplit);
+	for (int i = 0; i < 3; i++) {
+		//find the low and high precentile values (based on the input percentile)
+		Mat flat;
+		tmpsplit[i].reshape(1, 1).copyTo(flat);
+		cv::sort(flat, flat, CV_SORT_EVERY_ROW + CV_SORT_ASCENDING);
+		int lowval = flat.at<uchar>(cvFloor(((float) flat.cols) * halfPercent));
+		int highval = flat.at<uchar>(
+				cvCeil(((float) flat.cols) * (1.0 - halfPercent)));
+		cout << lowval << " " << highval << endl;
+
+		//saturate below the low percentile and above the high percentile
+		tmpsplit[i].setTo(lowval, tmpsplit[i] < lowval);
+		tmpsplit[i].setTo(highval, tmpsplit[i] > highval);
+
+		//scale the channel
+		normalize(tmpsplit[i], tmpsplit[i], 0, 255, NORM_MINMAX);
+	}
+	merge(tmpsplit, output);
+}
+
 Mat LineDetection::calcYellowMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di gialli
 	Mat yellowThresh;
-	inRange(input, Scalar(16, 190, 100), Scalar(36, 255, 255), yellowThresh);
-	showImg("thresh yellow (inside calcYellowMask)", yellowThresh);
+	inRange(input, Scalar(8, 30, 160), Scalar(45, 255, 255), yellowThresh);
+
+	// Effettuo una apertura per eliminare il rumore di tipo sale (specie sulle linee bianche)
+	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(2 * 4 + 1, 2 * 4 + 1), Point(4, 4));
+	morphologyEx(yellowThresh, yellowThresh, 2, kernel);
+	//imshow("yellowThresh  + Opening", yellowThresh);
 
 	// Effettuo la dilatazione specificandone il kernel.
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
-	Mat kernel = getStructuringElement(MORPH_RECT,
+	kernel = getStructuringElement(MORPH_RECT,
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
 	dilate(yellowThresh, yellowThresh, kernel);
@@ -27,16 +61,20 @@ Mat LineDetection::calcYellowMask(const Mat &input) {
 Mat LineDetection::calcWhiteMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di bianchi
 	Mat whiteThresh;
-	inRange(input, Scalar(0, 0, 235), Scalar(255, 35, 255), whiteThresh);
-	showImg("thresh white (inside calcWhiteMask)", whiteThresh);
+	inRange(input, Scalar(0, 0, 180), Scalar(255, 35, 255), whiteThresh);
+
+	// Effettuo una apertura per eliminare il rumore di tipo sale (specie sulle linee gialle)
+	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(2 * 4 + 1, 2 * 4 + 1), Point(4, 4));
+	morphologyEx(whiteThresh, whiteThresh, 2, kernel);
+	//imshow("whiteThresh  + Opening", whiteThresh);
 
 	// Effettuo la dilatazione specificandone il kernel
 	// La dilatazione serve per migliorare l'estrazione dell'edge quando si mette la maschera in AND con Canny.
-	Mat kernel = getStructuringElement(MORPH_RECT,
+	kernel = getStructuringElement(MORPH_RECT,
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
-	//Mat whiteMask;
 	dilate(whiteThresh, whiteThresh, kernel);
+	//imshow("Dilated whiteThresh + Opening", whiteThresh);
 
 	return whiteThresh;
 }
@@ -44,7 +82,7 @@ Mat LineDetection::calcWhiteMask(const Mat &input) {
 Mat LineDetection::calcRedMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di rossi
 	Mat redThresh;
-	inRange(input, Scalar(165, 100, 100), Scalar(185, 255, 255), redThresh);
+	inRange(input, Scalar(140, 100, 100), Scalar(195, 255, 255), redThresh);
 	showImg("thresh red (inside calcRedMask)", redThresh);
 
 	// Effettuo la dilatazione specificandone il kernel
@@ -84,10 +122,11 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	Mat redMask = LineDetection::calcRedMask(hsvImg);
 	showImg("Red mask", redMask);
 
-	// Applico Canny sull'immagine di partenza (che è in BGR)
+	// Applico Canny sull'immagine di partenza (in Gray). I valori di Canny devono essere 1:2 o 1:3
 	Mat grayImg, canny;
 	cvtColor(inputMod, grayImg, CV_BGR2GRAY);
-	Canny(grayImg, canny, 10, 100, 3);
+	Canny(grayImg, canny, 20, 60, 3);
+	// imshow("Canny", canny);
 	showImg("Canny", canny);
 
 	// Copio in result l'immagine di partenza (metà inferiore) in BGR
@@ -97,6 +136,7 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	// Faccio AND tra Canny e la maschera del giallo (threshold dilatato) per ottenere i bordi delle linee gialle
 	Mat yellowEdges;
 	bitwise_and(canny, yellowMask, yellowEdges, noArray());
+	// imshow("Yellow contours", yellowEdges);
 	showImg("Contorni linee gialle", yellowEdges);
 
 	// In startDirY ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea gialla
@@ -106,6 +146,7 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	// Faccio AND tra Canny e la maschera del bianco (dilatata) per ottenere i bordi delle linee bianche
 	Mat whiteEdges;
 	bitwise_and(canny, whiteMask, whiteEdges, noArray());
+	// imshow("White contours", whiteEdges);
 	showImg("Contorni linee bianche", whiteEdges);
 
 	// In startEndW ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea bianca
@@ -126,13 +167,13 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	LineDetection::detectAndShowLines(redEdges, result, Scalar(0, 0, 255));
 
 	// Disegno le linee su result
-	LineDetection::detectAndShowLines(whiteEdges, result, Scalar(0, 0, 0));
+	LineDetection::detectAndShowLines(whiteEdges, result, Scalar(236, 3, 253));
 
 	// Disegno le linee su result
-	LineDetection::detectAndShowLines(yellowEdges, result, Scalar(0, 255, 255));
+	LineDetection::detectAndShowLines(yellowEdges, result, Scalar(211, 253, 3));
 
 	imshow("Result", result);
-	waitKey(50);
+	waitKey(10);
 
 	srand(time(NULL));
 	int rnd = rand();
@@ -174,7 +215,6 @@ void LineDetection::calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 
 	// Disegno la result con tutte le linee e cerchi
 	imshow("LINE", input);
-	waitKey(1);
 
 	Vec4f startDirR = lines[2];
 	// Se viene trovata la linea rossa il robot rallenta
@@ -199,7 +239,7 @@ void LineDetection::calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 void LineDetection::detectAndShowLines(const Mat &input, Mat &output,
 		Scalar color) {
 	vector<Vec4i> lines;
-	HoughLinesP(input, lines, 1, CV_PI / 180 / 2, 40, 10, 10);
+	HoughLinesP(input, lines, 1, CV_PI / 180, 30, 10, 20);
 
 	for (size_t i = 0; i < lines.size(); i++) {
 		Vec4i l = lines[i];
@@ -211,10 +251,18 @@ Vec4f LineDetection::calcStartDirYellowLine(const Mat &yellowEdges) {
 	// Detecto le linee usando Hough (questo perché nella yellowEdges potrebbero esserci contorni di
 	// oggetti gialli esterni alla pista; con Hough andiamo ad estrapolare le linee, escludendo forme
 	// diverse e quindi gli oggetti esterni alla pista)
-	// L'unico caso sfigato è quello in cui ci sono linee gialle all'esterno della pista, ma questo
-	// worst case non viene contemplato nemmeno da quelli del MIT
+	// L'unico caso sfigato è quello in cui ci sono linee gialle all'esterno della pista
 	vector<Vec4i> lines;
-	HoughLinesP(yellowEdges, lines, 1, CV_PI / 180, 40, 10, 10);
+	HoughLinesP(yellowEdges, lines, 1, CV_PI / 180, 30, 10, 20);
+
+	/*
+	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
+	for(unsigned int i = 0; i < lines.size(); i++) {
+		Vec4i l = lines[i];
+		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255, 255, 255), 3, 4);
+	}
+	imshow("Hough", houghLines);
+	*/
 
 	// Inserisco tutti i punti delle linee gialle in points
 	vector<Point2i> points;
@@ -235,7 +283,16 @@ Vec4f LineDetection::calcStartDirYellowLine(const Mat &yellowEdges) {
 Vec4f LineDetection::calcStartDirWhiteLine(const Mat &whiteEdges,
 		Vec4f center) {
 	vector<Vec4i> lines;
-	HoughLinesP(whiteEdges, lines, 1, CV_PI / 180, 40, 10, 10);
+	HoughLinesP(whiteEdges, lines, 1, CV_PI / 180, 30, 10, 20);
+
+/*
+	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
+	for(unsigned int i = 0; i < lines.size(); i++) {
+		Vec4i l = lines[i];
+		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]), Scalar(255, 255, 255), 3, 4);
+	}
+	imshow("Hough", houghLines);
+*/
 
 	// Inserisco tutti i punti delle linee bianche (a destra della carreggiata) in points
 	vector<Point2i> points;
@@ -262,7 +319,7 @@ Vec4f LineDetection::calcStartDirRedLine(const Mat &redEdges) {
 	// L'unico caso sfigato è quello in cui ci sono linee rosse all'esterno della pista, ma questo
 	// worst case non viene contemplato nemmeno da quelli del MIT
 	vector<Vec4i> lines;
-	HoughLinesP(redEdges, lines, 1, CV_PI / 180 * 90, 50, 10, 10);
+	HoughLinesP(redEdges, lines, 1, CV_PI / 180 * 90, 30, 10, 10);
 
 	// Inserisco tutti i punti delle linee rosse in points
 	vector<Point2i> points;

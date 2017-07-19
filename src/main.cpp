@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 	cap.set(CV_CAP_PROP_BUFFERSIZE, 10);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
-	cap.open("video/video_finale.mp4");
+	cap.open("video/linefollowing.mp4");
 
 	if (!cap.isOpened()) {
 		cout << "Errore" << endl;
@@ -44,12 +44,21 @@ int main(int argc, char **argv) {
 	while (cap.isOpened()) {
 		if (cap.grab()) {
 			cap.retrieve(capImg);
+			/*
+			Mat colorBalancedImg;
+			LineDetection::colorBalancing(capImg, colorBalancedImg, 1);
+			imshow("Color Balanced", colorBalancedImg);
+			*/
 			lines = LineDetection::detectLines(capImg);
 			float leftWheel = 1, rightWheel = 1;
 			LineDetection::calcAdjParams(lines, capImg, leftWheel, rightWheel);
 			cout << "Left wheel:" << leftWheel << ", Right wheel: "
 					<< rightWheel << endl;
-			//SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
+			/*
+			SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
+			imshow("result", capImg);
+			waitKey(10);
+			*/
 		} else {
 			cap.release();
 		}

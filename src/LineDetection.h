@@ -11,10 +11,10 @@
 #include <cassert>
 #include <cmath>
 #include <vector>
+#include <iostream>
 
 #define VERBOSE false
-#define DILATE_SIZE 2
-#define ERODE_SIZE 8
+#define DILATE_SIZE 4
 
 using namespace cv;
 using namespace std;
@@ -23,6 +23,7 @@ class LineDetection {
 public:
 	LineDetection();
 	virtual ~LineDetection();
+	static void colorBalancing(const Mat &input, Mat &output, const float percent);
 	static vector<Vec4f> detectLines(const Mat &img);
 	static void calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 			float &leftWheel, float &rightWheel);
