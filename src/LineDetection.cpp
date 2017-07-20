@@ -145,10 +145,10 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	Mat grayImg, canny;
 	cvtColor(inputMod, grayImg, CV_BGR2GRAY);
 	// Rimuovo del rumore con il blur gaussiano
-	GaussianBlur(inputMod, inputMod, Size(5, 5), 0);
+	GaussianBlur(grayImg, grayImg, Size(5, 5), 0);
 	// Forse per la linea rossa serve fare un altro Canny con parametri differenti. I parametri devono essere sempre 1:3.
 	Canny(grayImg, canny, 60, 180, 3);
-	// imshow("Canny", canny);
+	//imshow("Canny", canny);
 	showImg("Canny", canny);
 
 	// Copio in result l'immagine di partenza (metà inferiore) in BGR
@@ -172,7 +172,7 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	// Faccio AND tra Canny e la maschera del bianco (dilatata) per ottenere i bordi delle linee bianche
 	Mat whiteEdges;
 	bitwise_and(canny, whiteMask, whiteEdges);
-	// imshow("White contours", whiteEdges);
+	//imshow("White contours", whiteEdges);
 	showImg("Contorni linee bianche", whiteEdges);
 
 	// In startEndW ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea bianca
@@ -184,17 +184,26 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 			Point(startDirW[2], startDirW[3]), Scalar(255, 100, 255), 3, 4);
 	linesOutput.push_back(startDirW);
 
+	Mat cannyRed;
+	Canny(grayImg, cannyRed, 20, 60, 3);
+	//imshow("canny red", cannyRed);
+
 	// Faccio AND tra Canny e la maschera del rosso (dilatata) per ottenere i bordi delle linee rosse
 	Mat redEdges;
-	bitwise_and(canny, redMask, redEdges);
+	bitwise_and(cannyRed, redMask, redEdges);
 	showImg("Contorni linee rosse", redEdges);
+	//imshow("Red contours", redEdges);
 
 	// In startDirR ci sono 4 float che rappresentano [dx, dy, x0, y0] della linea rossa
 	Vec4f startDirR = LineDetection::calcStartDirRedLine(redEdges);
+	line(result,
+			Point(200 * startDirR[0] + startDirR[2],
+					200 * startDirR[1] + startDirR[3]),
+			Point(startDirR[2], startDirR[3]), Scalar(255, 255, 255), 3, 4);
 	linesOutput.push_back(startDirR);
 
 	imshow("Result", result);
-	waitKey(10);
+	waitKey(0);
 
 	srand(time(NULL));
 	int rnd = rand();
@@ -298,8 +307,14 @@ Vec4f LineDetection::calcStartDirWhiteLine(const Mat &whiteEdges,
 	vector<Point2i> points;
 	for (unsigned int i = 0; i < lines.size(); i++) {
 		Vec4i l = lines[i];
-		if (l[0] > center[2] /*+ distFromYLine*/
-		&& l[2] > center[2] /*+ distFromYLine*/) {
+		float m = INT_MAX;
+		if (l[2] - l[0] != 0) {
+			m = ((float) (l[3] - l[1])) / (l[2] - l[0]);
+		}
+
+		if (l[0] > (center[2] + distFromYLine)
+				&& l[2] > (center[2] + distFromYLine)
+				&& (m > 0.02 || m < -0.02)) {
 			line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
 					Scalar(255, 255, 255), 3, 4);
 			points.push_back(Point2i(l[0], l[1]));
@@ -308,7 +323,6 @@ Vec4f LineDetection::calcStartDirWhiteLine(const Mat &whiteEdges,
 	}
 
 	imshow("Hough white", houghLines);
-
 	Vec4f wline;
 	if (points.size() >= 2)
 		fitLine(points, wline, CV_DIST_L2, 0, 0.01, 0.01);
@@ -326,13 +340,19 @@ Vec4f LineDetection::calcStartDirRedLine(const Mat &redEdges) {
 	vector<Vec4i> lines;
 	HoughLinesP(redEdges, lines, 1, CV_PI / 180 * 90, 20, 10, 20);
 
+	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
+
 	// Inserisco tutti i punti delle linee rosse in points
 	vector<Point2i> points;
 	for (unsigned int i = 0; i < lines.size(); i++) {
 		Vec4i l = lines[i];
 		points.push_back(Point2i(l[0], l[1]));
 		points.push_back(Point2i(l[2], l[3]));
+		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
+				Scalar(255, 255, 255), 3, 4);
 	}
+
+	// imshow("Hough red",houghLines);
 
 	Vec4f rline;
 	if (points.size() >= 2)

@@ -12,6 +12,7 @@
 #include <cmath>
 #include <vector>
 #include <iostream>
+#include <climits>
 
 #define VERBOSE false
 #define DILATE_SIZE 4
