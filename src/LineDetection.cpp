@@ -8,35 +8,6 @@ LineDetection::~LineDetection() {
 // TODO Auto-generated destructor stub
 }
 
-// perform the Simplest Color Balancing algorithm
-void LineDetection::colorBalancing(const Mat &input, Mat &output,
-		const float percent) {
-	assert(input.channels() == 3);
-	assert(percent > 0 && percent < 100);
-
-	float halfPercent = percent / 200.0f;
-
-	vector<Mat> tmpsplit;
-	split(input, tmpsplit);
-	for (int i = 0; i < 3; i++) {
-		//find the low and high precentile values (based on the input percentile)
-		Mat flat;
-		tmpsplit[i].reshape(1, 1).copyTo(flat);
-		cv::sort(flat, flat, CV_SORT_EVERY_ROW + CV_SORT_ASCENDING);
-		int lowval = flat.at<uchar>(cvFloor(((float) flat.cols) * halfPercent));
-		int highval = flat.at<uchar>(
-				cvCeil(((float) flat.cols) * (1.0 - halfPercent)));
-
-		//saturate below the low percentile and above the high percentile
-		tmpsplit[i].setTo(lowval, tmpsplit[i] < lowval);
-		tmpsplit[i].setTo(highval, tmpsplit[i] > highval);
-
-		//scale the channel
-		normalize(tmpsplit[i], tmpsplit[i], 0, 255, NORM_MINMAX);
-	}
-	merge(tmpsplit, output);
-}
-
 Mat LineDetection::calcYellowMask(const Mat &input) {
 	// Effettuo il threshold per una determinata scala di gialli
 	Mat yellowThresh;
@@ -93,7 +64,7 @@ Mat LineDetection::calcWhiteMask(const Mat &input) {
 			Size(2 * DILATE_SIZE + 1, 2 * DILATE_SIZE + 1),
 			Point(DILATE_SIZE, DILATE_SIZE));
 	dilate(whiteThresh, whiteThresh, kernel);
-	imshow("Dilated (whiteThresh + Opening)", whiteThresh);
+	//imshow("Dilated (whiteThresh + Opening)", whiteThresh);
 
 	return whiteThresh;
 }
@@ -114,14 +85,9 @@ Mat LineDetection::calcRedMask(const Mat &input) {
 	return redThresh;
 }
 
-vector<Vec4f> LineDetection::detectLines(const Mat &input) {
+vector<Vec4f> LineDetection::detectLines(const Mat &inputMod) {
 	// Dichiaro il vettore di linee di output
 	vector<Vec4f> linesOutput;
-
-	// Designo l'area di interesse (la metà inferiore dell'immagine di ingresso) e la ritaglio inserendola in inputMod
-	Rect roi = Rect(Point(0, input.rows / 5 * 3),
-			Point(input.cols, input.rows));
-	Mat inputMod = input(roi);
 
 	assert(inputMod.type() == CV_8UC3);
 
@@ -203,13 +169,7 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 	linesOutput.push_back(startDirR);
 
 	imshow("Result", result);
-	waitKey(0);
-
-	srand(time(NULL));
-	int rnd = rand();
-	stringstream ss;
-	ss << "images/" << "img_" << rnd << ".jpg";
-	imwrite(ss.str(), result);
+	waitKey(1);
 
 	return linesOutput;
 }
@@ -217,53 +177,69 @@ vector<Vec4f> LineDetection::detectLines(const Mat &input) {
 // Calcola i parametri dei motori per correggere la traiettoria
 void LineDetection::calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 		float &leftWheel, float &rightWheel) {
+
 	// Scelgo un punto P che è il punto medio della mia visuale
 	Point P(input.cols / 2, input.rows / 4 * 3);
 
 	// Considero punto di inizio della retta gialla e punto di inizio della retta bianca
 	Vec4f startDirY = lines[0];
 	Vec4f startDirW = lines[1];
-	Point whiteStartPoint(startDirW[2], startDirW[3]), yellowStartPoint(
+	Vec4f startDirR = lines[2];
+	Point whiteStartPoint(startDirW[2], startDirW[30]), yellowStartPoint(
 			startDirY[2], startDirY[3]);
+	/*
+	 // Calcolo i coefficienti angolari di linea bianca e linea gialla
+	 float mw = startDirW[1] / startDirW[0], my = startDirY[1] / startDirY[0];
 
-	// Calcolo i coefficienti angolari di linea bianca e linea gialla
-	float mw = startDirW[1] / startDirW[0], my = startDirY[1] / startDirY[0];
+	 // Calcolo la distanza tra P e le due rette (bianca e gialla)
+	 float distWhite = abs(
+	 P.x - (P.y - (whiteStartPoint.y - mw * whiteStartPoint.x)) / mw);
+	 float distYellow = abs(
+	 P.x - (P.y - (yellowStartPoint.y - my * yellowStartPoint.x)) / my);
 
-	// Calcolo la distanza tra P e le due rette (bianca e gialla)
-	float distWhite = abs(
-			P.x - (P.y - (whiteStartPoint.y - mw * whiteStartPoint.x)) / mw);
-	float distYellow = abs(
-			P.x - (P.y - (yellowStartPoint.y - my * yellowStartPoint.x)) / my);
+	 // Disegno su input: cerchio rosso (punto medio visuale), cerchio bianco (punto tra punto medio e retta bianca)
+	 // e cerchio giallo (punto tra punto medio e retta gialla)
+	 */
+	float distWhite = calcDist(startDirW, P);
+	float distYellow = calcDist(startDirY, P);
+	cout << "distWhite: " << distWhite << endl;
+	cout << "distYellow: " << distYellow << endl;
 
-	// Disegno su input: cerchio rosso (punto medio visuale), cerchio bianco (punto tra punto medio e retta bianca)
-	// e cerchio giallo (punto tra punto medio e retta gialla)
 	circle(input, P, 5, Scalar(0, 0, 255), 8, 1, 0);
 	circle(input, Point(P.x + distWhite / 2, P.y), 5, Scalar(255, 255, 255), 8,
 			1, 0);
 	circle(input, Point(P.x - distYellow / 2, P.y), 5, Scalar(0, 255, 255), 8,
 			1, 0);
 
-	// Disegno la result con tutte le linee e cerchi
-	imshow("LINE", input);
-
-	Vec4f startDirR = lines[2];
-	// Se viene trovata la linea rossa il robot rallenta
-	if (startDirR[0] != 1 && startDirR[1] != 100 && leftWheel >= 1
-			&& rightWheel >= 1) {
-		leftWheel *= 0.9;
-		rightWheel *= 0.9;
-	}
-
 	// Rettifico la mia traiettoria valutando le distanze dalle rette bianche e gialle
 	// Ho dei dubbi sul primo if!
-	float threshold = 0.012, diff = (distWhite - distYellow) / input.cols;
+	float threshold = 20, diff = (distWhite - distYellow) / input.cols;
+	diff *= 100;
+	float softThreshold = 30;
+
+	leftWheel = 0.5;
+	rightWheel = 0.5;
 	if (diff < -threshold) {
-		leftWheel = 1;
-		rightWheel = 1.5;
+		if (diff < -softThreshold) {
+			leftWheel = 0;
+			rightWheel = 0.5;
+		} else {
+			leftWheel = 0.2;
+			rightWheel = 0.5;
+		}
 	} else if (diff > threshold) {
-		leftWheel = 1.5;
-		rightWheel = 1;
+		if (diff > softThreshold) {
+			leftWheel = 0.5;
+			rightWheel = 0;
+		} else {
+			leftWheel = 0.5;
+			rightWheel = 0.2;
+		}
 	}
+	cout << "Diff: " << diff << endl;
+	// Disegno la result con tutte le linee e cerchi
+	imshow("LINE", input);
+	waitKey(1);
 }
 
 Vec4f LineDetection::calcStartDirYellowLine(const Mat &yellowEdges) {
@@ -274,24 +250,24 @@ Vec4f LineDetection::calcStartDirYellowLine(const Mat &yellowEdges) {
 	vector<Vec4i> lines;
 	HoughLinesP(yellowEdges, lines, 1, CV_PI / 180, 20, 10, 20);
 
-	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
+//	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
 
 	// Inserisco tutti i punti delle linee gialle in points
 	vector<Point2i> points;
 	for (unsigned int i = 0; i < lines.size(); i++) {
 		Vec4i l = lines[i];
-		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
-				Scalar(255, 255, 255), 3, 4);
+//		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
+//				Scalar(255, 255, 255), 3, 4);
 		points.push_back(Point2i(l[0], l[1]));
 		points.push_back(Point2i(l[2], l[3]));
 	}
-	imshow("Hough yellow", houghLines);
+	//imshow("Hough yellow", houghLines);
 
 	Vec4f yline;
 	if (points.size() >= 2)
 		fitLine(points, yline, CV_DIST_L2, 0, 0.01, 0.01);
 	else
-		yline = Vec4i(1, 100, yellowEdges.cols / 50, yellowEdges.rows / 2);
+		yline = Vec4i(1, 100, 0, yellowEdges.rows / 2);
 	return yline;
 }
 
@@ -300,7 +276,7 @@ Vec4f LineDetection::calcStartDirWhiteLine(const Mat &whiteEdges,
 	vector<Vec4i> lines;
 	HoughLinesP(whiteEdges, lines, 1, CV_PI / 180, 20, 10, 20);
 
-	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
+	//Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
 
 	// Inserisco tutti i punti delle linee bianche (a destra della linea gialla + distFromYLine) in points
 	int distFromYLine = 20;
@@ -315,19 +291,19 @@ Vec4f LineDetection::calcStartDirWhiteLine(const Mat &whiteEdges,
 		if (l[0] > (center[2] + distFromYLine)
 				&& l[2] > (center[2] + distFromYLine)
 				&& (m > 0.02 || m < -0.02)) {
-			line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
-					Scalar(255, 255, 255), 3, 4);
+//			line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
+//					Scalar(255, 255, 255), 3, 4);
 			points.push_back(Point2i(l[0], l[1]));
 			points.push_back(Point2i(l[2], l[3]));
 		}
 	}
 
-	imshow("Hough white", houghLines);
+	//imshow("Hough white", houghLines);
 	Vec4f wline;
 	if (points.size() >= 2)
 		fitLine(points, wline, CV_DIST_L2, 0, 0.01, 0.01);
 	else
-		wline = Vec4i(1, 100, whiteEdges.cols * 49 / 50, whiteEdges.rows / 2);
+		wline = Vec4i(1, 100, whiteEdges.cols, whiteEdges.rows / 2);
 	return wline;
 }
 
@@ -340,7 +316,7 @@ Vec4f LineDetection::calcStartDirRedLine(const Mat &redEdges) {
 	vector<Vec4i> lines;
 	HoughLinesP(redEdges, lines, 1, CV_PI / 180 * 90, 20, 10, 20);
 
-	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
+//	Mat houghLines = Mat::zeros(600, 600, CV_8UC3);
 
 	// Inserisco tutti i punti delle linee rosse in points
 	vector<Point2i> points;
@@ -348,8 +324,8 @@ Vec4f LineDetection::calcStartDirRedLine(const Mat &redEdges) {
 		Vec4i l = lines[i];
 		points.push_back(Point2i(l[0], l[1]));
 		points.push_back(Point2i(l[2], l[3]));
-		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
-				Scalar(255, 255, 255), 3, 4);
+//		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
+//				Scalar(255, 255, 255), 3, 4);
 	}
 
 	// imshow("Hough red",houghLines);
@@ -368,13 +344,33 @@ void LineDetection::showImg(String nameWindow, const Mat &mat) {
 	}
 }
 
-void LineDetection::detectAndShowLines(const Mat &input, Mat &output,
-		Scalar color) {
-	vector<Vec4i> lines;
-	HoughLinesP(input, lines, 1, CV_PI / 180, 20, 10, 20);
-
-	for (size_t i = 0; i < lines.size(); i++) {
-		Vec4i l = lines[i];
-		line(output, Point(l[0], l[1]), Point(l[2], l[3]), color, 3, 4);
+float LineDetection::calcDistRed(Vec4f Line, Point p) {
+	if (Line[0] == 1 && Line[1] == 100)
+		return -1;
+	float m = Line[1] / Line[0];
+	if (m == 0) {
+		return p.y - Line[3];
 	}
+	float q = Line[3] - m * Line[2];
+	float qp = 1 / m * p.x + p.y;
+	float rx = 0, ry = 0;
+	rx = ((qp - q) / (m * m + 1)) * m;
+	ry = m * rx + q;
+	return sqrt(pow((p.x - rx), 2) + pow((p.y - ry), 2));
+
+}
+
+float LineDetection::calcDist(Vec4f Line, Point p) {
+
+	float m = Line[1] / Line[0];
+	if (m == 0) {
+		return p.y - Line[3];
+	}
+	float q = Line[3] - m * Line[2];
+	float qp = 1 / m * p.x + p.y;
+	float rx = 0, ry = 0;
+	rx = ((qp - q) / (m * m + 1)) * m;
+	ry = m * rx + q;
+	return sqrt(pow((p.x - rx), 2) + pow((p.y - ry), 2));
+
 }

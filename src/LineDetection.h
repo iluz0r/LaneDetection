@@ -16,6 +16,7 @@
 
 #define VERBOSE false
 #define DILATE_SIZE 4
+#define CUT_RATIO 3/5
 
 using namespace cv;
 using namespace std;
@@ -24,11 +25,10 @@ class LineDetection {
 public:
 	LineDetection();
 	virtual ~LineDetection();
-	static void colorBalancing(const Mat &input, Mat &output, const float percent);
 	static vector<Vec4f> detectLines(const Mat &img);
 	static void calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 			float &leftWheel, float &rightWheel);
-	static void detectAndShowLines(const Mat &input, Mat &output, Scalar color);
+	//static void detectAndShowLines(const Mat &input, Mat &output, Scalar color);
 	static Vec4f calcStartDirYellowLine(const Mat &input);
 	static Vec4f calcStartDirRedLine(const Mat &input);
 	static Vec4f calcStartDirWhiteLine(const Mat &input, Vec4f center);
@@ -36,6 +36,8 @@ public:
 	static Mat calcWhiteMask(const Mat &input);
 	static Mat calcRedMask(const Mat &input);
 	static void showImg(String nameWindow, const Mat& mat);
+	static float calcDistRed(Vec4f Line, Point p);
+	static float calcDist(Vec4f line, Point p);
 };
 
 #endif /* SRC_LINEDETECTION_H_ */
