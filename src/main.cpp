@@ -1,7 +1,7 @@
 #include "LineDetection.h"
 #include "SignalDetect.h"
 
-#define CLASSIFIER_FILE "FilesClassifier/cascadeNew.xml"
+#define CLASSIFIER_FILE "FilesClassifier/newNewCascade.xml"
 
 #include <iostream>
 
@@ -56,7 +56,7 @@ int main(int argc, char **argv) {
 	cap.set(CV_CAP_PROP_BUFFERSIZE, 10);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, 600);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, 800);
-	cap.open("video/linefollowing.mp4");
+	cap.open("video/stop.mp4");
 
 	if (!cap.isOpened()) {
 		cout << "Errore" << endl;
@@ -69,18 +69,19 @@ int main(int argc, char **argv) {
 			/*
 			Mat colorBalancedImg;
 			LineDetection::colorBalancing(capImg, colorBalancedImg, 20);*/
-
+/*
 			lines = LineDetection::detectLines(capImg);
 			float leftWheel = 1, rightWheel = 1;
 			LineDetection::calcAdjParams(lines, capImg, leftWheel,
 					rightWheel);
 			cout << "Left wheel:" << leftWheel << ", Right wheel: "
 					<< rightWheel << endl;
-			/*
+					*/
+
 			 SignalDetect::detectAndClassifySignal(capImg, trainCascade, clas);
 			 imshow("result", capImg);
-			 waitKey(10);
-			 */
+			 waitKey(1);
+
 		} else {
 			cap.release();
 		}

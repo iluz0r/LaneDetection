@@ -202,8 +202,6 @@ void LineDetection::calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 	 */
 	float distWhite = calcDist(startDirW, P);
 	float distYellow = calcDist(startDirY, P);
-	cout << "distWhite: " << distWhite << endl;
-	cout << "distYellow: " << distYellow << endl;
 
 	circle(input, P, 5, Scalar(0, 0, 255), 8, 1, 0);
 	circle(input, Point(P.x + distWhite / 2, P.y), 5, Scalar(255, 255, 255), 8,
@@ -236,10 +234,9 @@ void LineDetection::calcAdjParams(const vector<Vec4f> &lines, Mat &input,
 			rightWheel = 0.2;
 		}
 	}
-	cout << "Diff: " << diff << endl;
 	// Disegno la result con tutte le linee e cerchi
 	imshow("LINE", input);
-	waitKey(1);
+	waitKey(0);
 }
 
 Vec4f LineDetection::calcStartDirYellowLine(const Mat &yellowEdges) {
@@ -258,8 +255,11 @@ Vec4f LineDetection::calcStartDirYellowLine(const Mat &yellowEdges) {
 		Vec4i l = lines[i];
 //		line(houghLines, Point(l[0], l[1]), Point(l[2], l[3]),
 //				Scalar(255, 255, 255), 3, 4);
-		points.push_back(Point2i(l[0], l[1]));
-		points.push_back(Point2i(l[2], l[3]));
+		float m = ((float) (l[3] - l[1])) / (l[2] - l[0]);
+		if (m < 0) {
+			points.push_back(Point2i(l[0], l[1]));
+			points.push_back(Point2i(l[2], l[3]));
+		}
 	}
 	//imshow("Hough yellow", houghLines);
 
